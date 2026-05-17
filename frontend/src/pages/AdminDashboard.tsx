@@ -34,10 +34,6 @@ const AdminDashboard: React.FC = () => {
   }, {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-flats"] });
-      toast.success("Flat added successfully!", "The new flat has been registered.");
-    },
-    onError: (error: any) => {
-      toastUtils.apiError(error);
     }
   });
 
@@ -56,18 +52,22 @@ const AdminDashboard: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-bills"] });
       setBillAmount("");
-      toast.success("Bills generated successfully!", `Generated bills for ${flats.length} flats`);
-    },
-    onError: (error: any) => {
-      toastUtils.apiError(error);
     }
   });
 
   const handleCreateFlat = (e: React.FormEvent) => {
     e.preventDefault();
     if (!flatNumber || !ownerName || !email) return;
-    toast.loading("Adding flat...");
-    createFlat.mutate({ flatNumber, ownerName, email });
+    
+    toast.promise(
+      createFlat.mutateAsync({ flatNumber, ownerName, email }),
+      {
+        loading: "Adding flat...",
+        success: "Flat added successfully!",
+        error: "Failed to add flat"
+      }
+    );
+    
     setFlatNumber("");
     setOwnerName("");
     setEmail("");
@@ -215,8 +215,14 @@ const AdminDashboard: React.FC = () => {
                 <button 
                   onClick={() => {
                     if (billAmount && Number(billAmount) > 0) {
-                      toast.loading("Generating bills...");
-                      generateBills.mutate(Number(billAmount));
+                      toast.promise(
+                        generateBills.mutateAsync(Number(billAmount)),
+                        {
+                          loading: "Generating bills...",
+                          success: `Bills generated for ${flats.length} flats!`,
+                          error: "Failed to generate bills"
+                        }
+                      );
                     }
                   }}
                   disabled={generateBills.isLoading || flats.length === 0}
