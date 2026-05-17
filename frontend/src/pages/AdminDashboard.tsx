@@ -2,9 +2,12 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/axios";
 import { Users, FileText, IndianRupee, Plus, AlertCircle, CheckCircle2, CircleDollarSign } from "lucide-react";
+import { useToast } from "../hooks/useToast";
+import { toastUtils } from "../lib/toastUtils";
 
 const AdminDashboard: React.FC = () => {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<"flats" | "bills">("flats");
   
   // Flat Form State
@@ -29,7 +32,13 @@ const AdminDashboard: React.FC = () => {
     const { data } = await api.post("/admin/flats", newFlat);
     return data;
   }, {
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-flats"] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-flats"] });
+      toast.success("Flat added successfully!", "The new flat has been registered.");
+    },
+    onError: (error: any) => {
+      toastUtils.apiError(error);
+    }
   });
 
   const generateBills = useMutation(async (amount: number) => {
@@ -47,13 +56,17 @@ const AdminDashboard: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-bills"] });
       setBillAmount("");
-      alert("Bills generated successfully!");
+      toast.success("Bills generated successfully!", `Generated bills for ${flats.length} flats`);
+    },
+    onError: (error: any) => {
+      toastUtils.apiError(error);
     }
   });
 
   const handleCreateFlat = (e: React.FormEvent) => {
     e.preventDefault();
     if (!flatNumber || !ownerName || !email) return;
+    toast.loading("Adding flat...");
     createFlat.mutate({ flatNumber, ownerName, email });
     setFlatNumber("");
     setOwnerName("");
@@ -202,6 +215,7 @@ const AdminDashboard: React.FC = () => {
                 <button 
                   onClick={() => {
                     if (billAmount && Number(billAmount) > 0) {
+                      toast.loading("Generating bills...");
                       generateBills.mutate(Number(billAmount));
                     }
                   }}
